@@ -7,7 +7,7 @@ require (
 	github.com/caddyserver/certmagic v0.21.2
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.20.0
-	github.com/influxdata/influxdb-client-go v2.13.0
+	github.com/influxdata/influxdb-client-go v1.4.0
 	github.com/mailgun/groupcache/v2 v2.5.0
 	github.com/ory/dockertest/v3 v3.6.5
 	github.com/pquerna/cachecontrol v0.2.0
