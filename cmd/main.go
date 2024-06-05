@@ -30,9 +30,9 @@ import (
 
 	// plug in Caddy modules here
 	_ "github.com/caddyserver/caddy/v2/modules/standard"
-	_ "github.com/sillygod/cdp-cache"
-	_ "github.com/sillygod/cdp-cache/extends/influxlog"
-	_ "github.com/sillygod/cdp-cache/extends/storage"
+	_ "github.com/adammakowskidev/caddy-cache-engine"
+	_ "github.com/adammakowskidev/caddy-cache-engine/extends/influxlog"
+	_ "github.com/adammakowskidev/caddy-cache-engine/extends/storage"
 )
 
 func main() {
