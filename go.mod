@@ -1,19 +1,19 @@
-module github.com/sillygod/cdp-cache
+module github.com/adammakowskidev/caddy-cache-engine
 
 go 1.20
 
 require (
-	github.com/caddyserver/caddy/v2 v2.6.4
-	github.com/caddyserver/certmagic v0.17.2
-	github.com/google/uuid v1.3.0
+	github.com/caddyserver/caddy/v2 v2.8.4
+	github.com/caddyserver/certmagic v0.21.2
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.20.0
-	github.com/influxdata/influxdb-client-go v1.4.0
-	github.com/mailgun/groupcache/v2 v2.4.2
+	github.com/influxdata/influxdb-client-go v2.13.0
+	github.com/mailgun/groupcache/v2 v2.5.0
 	github.com/ory/dockertest/v3 v3.6.5
-	github.com/pquerna/cachecontrol v0.1.0
-	github.com/redis/go-redis/v9 v9.0.2
-	github.com/stretchr/testify v1.8.2
-	go.uber.org/zap v1.24.0
+	github.com/pquerna/cachecontrol v0.2.0
+	github.com/redis/go-redis/v9 v9.5.2
+	github.com/stretchr/testify v1.9.0
+	go.uber.org/zap v1.27.0
 )
 
 require (
