@@ -18,8 +18,8 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/pquerna/cachecontrol/cacheobject"
-	"github.com/sillygod/cdp-cache/backends"
-	"github.com/sillygod/cdp-cache/extends/distributed"
+	"github.com/adammakowskidev/caddy-cache-engine/backends"
+	"github.com/adammakowskidev/caddy-cache-engine/extends/distributed"
 )
 
 // Module lifecycle
