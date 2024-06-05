@@ -1,4 +1,4 @@
-module s
+module github.com/adammakowskidev/caddy-cache-engine
 
 go 1.20
 
