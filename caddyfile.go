@@ -20,7 +20,6 @@ type CacheType string
 
 const (
 	file     CacheType = "file"
-	redis    CacheType = "redis"
 	inMemory CacheType = "in_memory"
 )
 
@@ -43,7 +42,6 @@ var (
 	defaultCacheType              = file
 	defaultcacheBucketsNum        = 256
 	defaultCacheMaxMemorySize     = GB // default is 1 GB
-	defaultRedisConnectionSetting = "localhost:6379 0"
 	defaultStaleMaxAge            = time.Duration(0)
 	defaultCacheKeyTemplate       = "{http.request.method} {http.request.host}{http.request.uri.path}?{http.request.uri.query}"
 	// Note: prevent character space in the key
@@ -62,11 +60,7 @@ const (
 	keyCacheBucketsNum        = "cache_bucket_num"
 	keyCacheMaxMemorySize     = "cache_max_memory_size"
 	keyCacheType              = "cache_type"
-	keyRedisConnectionSetting = "redis_connection_setting"
-	// format: addr db password or addr db or addr
-	// ex.
-	// localhost:6789 0 => connect without password. only index and host:port provided
-	// the following are keys for extensions
+	
 	keyDistributed = "distributed"
 	keyInfluxLog   = "influxlog"
 	keyStaleMaxAge = "stale_max_age"
@@ -89,7 +83,6 @@ type Config struct {
 	CacheMaxMemorySize     int                      `json:"cache_max_memory_size,omitempty"`
 	Path                   string                   `json:"path,omitempty"`
 	CacheKeyTemplate       string                   `json:"cache_key_template,omitempty"`
-	RedisConnectionSetting string                   `json:"redis_connection_setting,omitempty"`
 	StaleMaxAge            time.Duration            `json:"stale_max_age,omitempty"`
 }
 
@@ -106,7 +99,6 @@ func getDefaultConfig() *Config {
 		Path:                   defaultPath,
 		Type:                   defaultCacheType,
 		CacheKeyTemplate:       defaultCacheKeyTemplate,
-		RedisConnectionSetting: defaultRedisConnectionSetting,
 		StaleMaxAge:            defaultStaleMaxAge,
 	}
 }
@@ -154,12 +146,6 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.Err("Invalid usage of status_header in cache config.")
 				}
 				config.StatusHeader = args[0]
-
-			case keyRedisConnectionSetting:
-				if len(args) > 3 {
-					return d.Err("Invalid usage of redis_connection_setting in cache config.")
-				}
-				config.RedisConnectionSetting = strings.Join(args, " ")
 
 			case keyCacheType:
 				if len(args) != 1 {
