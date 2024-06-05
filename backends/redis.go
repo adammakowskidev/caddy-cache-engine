@@ -6,6 +6,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -13,9 +14,10 @@ import (
 
 var (
 	client *redis.Client
+	l      sync.Mutex // Add this line to define the mutex
 )
 
-// RedisBackend saves the content into redis
+// RedisBackend saves the content into Redis.
 type RedisBackend struct {
 	Ctx        context.Context
 	Key        string
@@ -23,13 +25,12 @@ type RedisBackend struct {
 	expiration time.Time
 }
 
-// ParseRedisConfig parses the connection settings string from the caddyfile
+// ParseRedisConfig parses the connection settings string from the Caddyfile.
 func ParseRedisConfig(connSetting string) (*redis.Options, error) {
 	var err error
 	args := strings.Split(connSetting, " ")
 	addr, password, db := args[0], "", 0
 	length := len(args)
-	// the format of args: addr db password
 
 	if length > 1 {
 		db, err = strconv.Atoi(args[1])
@@ -49,28 +50,31 @@ func ParseRedisConfig(connSetting string) (*redis.Options, error) {
 	}, nil
 }
 
-// InitRedisClient inits the client for the redis
+// InitRedisClient initializes the client for Redis.
 func InitRedisClient(addr, password string, db int) error {
 	l.Lock()
 	defer l.Unlock()
 
-	client = redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       db,
-	})
+	if client == nil { // Ensure the client is only initialized once
+		client = redis.NewClient(&redis.Options{
+			Addr:     addr,
+			Password: password,
+			DB:       db,
+		})
 
-	ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 
-	if _, err := client.Ping(ctx).Result(); err != nil {
-		return err
+		if _, err := client.Ping(ctx).Result(); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// NewRedisBackend new a redis backend for cache's storage
-func NewRedisBackend(ctx context.Context, key string, expiration time.Time) (Backend, error) {
+// NewRedisBackend creates a new Redis backend for cache storage.
+func NewRedisBackend(ctx context.Context, key string, expiration time.Time) (*RedisBackend, error) {
 	return &RedisBackend{
 		Ctx:        ctx,
 		Key:        key,
@@ -78,34 +82,39 @@ func NewRedisBackend(ctx context.Context, key string, expiration time.Time) (Bac
 	}, nil
 }
 
-// Write writes the response content in a temp buffer
-func (r *RedisBackend) Write(p []byte) (n int, err error) {
+// Write writes the response content to a temporary buffer.
+func (r *RedisBackend) Write(p []byte) (int, error) {
 	return r.content.Write(p)
 }
 
-// Flush do nothing here
+// Flush does nothing here.
 func (r *RedisBackend) Flush() error {
 	return nil
 }
 
-// Length return the cache content's length
+// Length returns the length of the cache content.
 func (r *RedisBackend) Length() int {
 	return r.content.Len()
 }
 
-// Close write the temp buffer's content to the groupcache
+// Close writes the temporary buffer's content to Redis.
 func (r *RedisBackend) Close() error {
-	_, err := client.Set(r.Ctx, r.Key, r.content.Bytes(), r.expiration.Sub(time.Now())).Result()
+	expiration := time.Until(r.expiration)
+	if expiration <= 0 {
+		expiration = 1 * time.Second // Ensure the key is set with a minimal expiration time
+	}
+
+	_, err := client.Set(r.Ctx, r.Key, r.content.Bytes(), expiration).Result()
 	return err
 }
 
-// Clean performs the purge storage
+// Clean performs the purge storage.
 func (r *RedisBackend) Clean() error {
 	_, err := client.Del(r.Ctx, r.Key).Result()
 	return err
 }
 
-// GetReader return a reader for the write public response
+// GetReader returns a reader for the cached response.
 func (r *RedisBackend) GetReader() (io.ReadCloser, error) {
 	content, err := client.Get(r.Ctx, r.Key).Result()
 	if err != nil {
