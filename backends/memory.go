@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -17,14 +16,18 @@ import (
 
 type ctxKey string
 
+// NoPreCollectError is a custom error when there is no precollect content
+// in memory cache.
 type NoPreCollectError struct {
 	Content string
 }
 
+// Error return the error message
 func (e NoPreCollectError) Error() string {
 	return e.Content
 }
 
+// NewNoPreCollectError new a NoPreCollectError error
 func NewNoPreCollectError(msg string) error {
 	return NoPreCollectError{Content: msg}
 }
@@ -38,7 +41,7 @@ var (
 	groupName = "http_cache"
 	groupch   *groupcache.Group
 	pool      *groupcache.HTTPPool
-	initOnce  sync.Once
+	l         sync.Mutex
 	srv       *http.Server
 )
 
@@ -57,12 +60,15 @@ func GetGroupCachePool() *groupcache.HTTPPool {
 	return pool
 }
 
-// ReleaseGroupCacheRes releases the resources the memory backend collects
+// ReleaseGroupCacheRes releases the resources the memory backend
+// collects
 func ReleaseGroupCacheRes() error {
 	if srv != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		return srv.Shutdown(ctx)
+		if err := srv.Shutdown(ctx); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -72,43 +78,43 @@ func ReleaseGroupCacheRes() error {
 func InitGroupCacheRes(maxSize int) error {
 	var err error
 
-	initOnce.Do(func() {
-		poolOptions := &groupcache.HTTPPoolOptions{}
-		var ip net.IP
-		ip, err = helper.IPAddr()
-		if err != nil {
-			return
+	l.Lock()
+	defer l.Unlock()
+
+	poolOptions := &groupcache.HTTPPoolOptions{}
+
+	ip, err := helper.IPAddr()
+	if err != nil {
+		return err
+	}
+
+	self := "http://" + ip.String()
+	if pool == nil {
+		pool = groupcache.NewHTTPPoolOpts(self, poolOptions)
+	}
+
+	if groupch == nil {
+		groupch = groupcache.NewGroup(groupName, int64(maxSize), groupcache.GetterFunc(getter))
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/_groupcache/", pool)
+	srv = &http.Server{
+		Addr:    ":http",
+		Handler: mux,
+	}
+
+	errChan := make(chan error, 1)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errChan <- err
 		}
+	}()
 
-		self := "http://" + ip.String()
-		if pool == nil {
-			pool = groupcache.NewHTTPPoolOpts(self, poolOptions)
-		}
+	errChan <- nil
 
-		if groupch == nil {
-			groupch = groupcache.NewGroup(groupName, int64(maxSize), groupcache.GetterFunc(getter))
-		}
-
-		mux := http.NewServeMux()
-		mux.Handle("/_groupcache/", pool)
-		srv = &http.Server{
-			Addr:    ":http",
-			Handler: mux,
-		}
-
-		errChan := make(chan error, 1)
-
-		go func() {
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				errChan <- err
-			}
-			close(errChan)
-		}()
-
-		err = <-errChan
-	})
-
-	return err
+	return <-errChan
 }
 
 func getter(ctx context.Context, key string, dest groupcache.Sink) error {
@@ -122,35 +128,47 @@ func getter(ctx context.Context, key string, dest groupcache.Sink) error {
 		return errors.New("no ttl provided")
 	}
 
-	return dest.SetBytes(p, ttl)
+	if err := dest.SetBytes(p, ttl); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewInMemoryBackend get the singleton of groupcache
 func NewInMemoryBackend(ctx context.Context, key string, expiration time.Time) (Backend, error) {
-	return &InMemoryBackend{
+	// add the expiration time as the suffix of the key
+	i := &InMemoryBackend{
 		Ctx:        ctx,
-		Key:        key,
 		expiration: expiration,
-	}, nil
+	}
+
+	i.Key = key
+	return i, nil
 }
 
-// Write adds the response content in the context for the groupcache's setter function.
+// Write adds the response content in the context for the groupcache's
+// setter function.
 func (i *InMemoryBackend) Write(p []byte) (n int, err error) {
 	i.isContentWritten = true
 	return i.content.Write(p)
 }
 
-// Flush does nothing here
+// Flush do nothing here
 func (i *InMemoryBackend) Flush() error {
 	return nil
 }
 
 // Clean performs the purge storage
 func (i *InMemoryBackend) Clean() error {
+	// NOTE: there is no way to del or update the cache in the official groupcache
+	// Therefore, I decide to use github.com/mailgun/groupcache/v2
+
+	// TODO: to figure out why get context cancel here
 	return groupch.Remove(i.Ctx, i.Key)
 }
 
-// Close writes the temp buffer's content to the groupcache
+// Close write the temp buffer's content to the groupcache
 func (i *InMemoryBackend) Close() error {
 	if i.isContentWritten {
 		i.Ctx = context.WithValue(i.Ctx, getterCtxKey, i.content.Bytes())
@@ -164,19 +182,27 @@ func (i *InMemoryBackend) Close() error {
 	return nil
 }
 
-// Length returns the cache content's length
+// Length return the cache content's length
 func (i *InMemoryBackend) Length() int {
-	return len(i.cachedBytes)
+	if i.cachedBytes != nil {
+		return len(i.cachedBytes)
+	}
+
+	return 0
 }
 
-// GetReader returns a reader for the cached response
+// GetReader return a reader for the write public response
 func (i *InMemoryBackend) GetReader() (io.ReadCloser, error) {
+
 	if len(i.cachedBytes) == 0 {
 		err := groupch.Get(i.Ctx, i.Key, groupcache.AllocatingByteSliceSink(&i.cachedBytes))
 		if err != nil {
 			caddy.Log().Named("backend:memory").Warn(err.Error())
 			return nil, err
 		}
+
 	}
-	return io.NopCloser(bytes.NewReader(i.cachedBytes)), nil
+
+	rc := io.NopCloser(bytes.NewReader(i.cachedBytes))
+	return rc, nil
 }
