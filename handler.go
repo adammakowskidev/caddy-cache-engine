@@ -237,7 +237,7 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 		if err := backends.InitGroupCacheRes(h.Config.CacheMaxMemorySize); err != nil {
 			return err
 		}
-
+	}
 	// load the guest module distributed
 	err = h.provisionDistributed(ctx)
 	if err != nil {
