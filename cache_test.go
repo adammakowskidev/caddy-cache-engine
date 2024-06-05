@@ -12,7 +12,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/sillygod/cdp-cache/backends"
+	"github.com/adammakowskidev/caddy-cache-engine/backends"
 	"github.com/stretchr/testify/suite"
 )
 
