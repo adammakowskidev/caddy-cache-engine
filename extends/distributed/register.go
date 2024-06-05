@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
-	"github.com/sillygod/cdp-cache/backends"
-	"github.com/sillygod/cdp-cache/pkg/helper"
+	"github.com/adammakowskidev/caddy-cache-engine/backends"
+	"github.com/adammakowskidev/caddy-cache-engine/pkg/helper"
 )
 
 var (
