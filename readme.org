@@ -11,7 +11,7 @@
 #+HTML: <a href="https://codeclimate.com/github/sillygod/cdp-cache/test_coverage"><img src="https://api.codeclimate.com/v1/badges/a99b4ae948836cdedd12/test_coverage" /></a>
 
 
-* Caddy Http Cache
+* Caddy Cache Engine
 
 This is a http cache plugin for caddy 2.  The difference between this and cache-handler https://github.com/caddyserver/cache-handler is that this one is much easier to understand and configure.   But it does not support a =distrobuted ache=, and it needs to be compiled with golang 1.20 and caddy version v2.6.4
 
