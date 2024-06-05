@@ -378,7 +378,8 @@ func (e *Entry) setBackend(ctx context.Context, config *Config) error {
 		backend, err = backends.NewFileBackend(config.Path)
 	case inMemory:
 		backend, err = backends.NewInMemoryBackend(ctx, e.keyWithRespectVary(), e.expiration)
-
+	}
+	
 	e.Response.SetBody(backend)
 	return err
 }
