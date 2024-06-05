@@ -11,7 +11,6 @@ require (
 	github.com/mailgun/groupcache/v2 v2.5.0
 	github.com/ory/dockertest/v3 v3.6.5
 	github.com/pquerna/cachecontrol v0.2.0
-	github.com/redis/go-redis/v9 v9.5.2
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 )
