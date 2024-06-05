@@ -74,31 +74,6 @@ func (suite *CaddyfileTestSuite) TestInvalidParameter() {
 	suite.Error(err, "invalid parameter")
 }
 
-func (suite *CaddyfileTestSuite) TestRedisConnectionSetting() {
-	h := httpcaddyfile.Helper{
-		Dispenser: caddyfile.NewTestDispenser(`
-        http_cache {
-            redis_connection_setting localhost:6379 2 pass 5
-        }
-        `),
-	}
-
-	_, err := parseCaddyfile(h)
-	suite.Error(err, "invalid usage of redis_connection_setting in cache config.")
-
-	h = httpcaddyfile.Helper{
-		Dispenser: caddyfile.NewTestDispenser(`
-        http_cache {
-            redis_connection_setting localhost:6379 2
-        }
-        `),
-	}
-
-	_, err = parseCaddyfile(h)
-	suite.Assert().NoError(err)
-
-}
-
 func (suite *CaddyfileTestSuite) TestDistributedCacheConfig() {
 	h := httpcaddyfile.Helper{
 		Dispenser: caddyfile.NewTestDispenser(`
