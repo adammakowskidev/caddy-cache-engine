@@ -108,16 +108,9 @@ func InitGroupCacheRes(maxSize int) error {
 			}
 		}()
 
-		select {
-		case err := <-errChan:
-			return err
-		case <-time.After(30 * time.Second):
-			// Assuming server started successfully if no error after 30 second.
-			return nil
-		}
-	}
+		errChan <- nil
 
-	return nil
+		return <-errChan
 }
 
 // getter fetches the cached content based on the provided key.
