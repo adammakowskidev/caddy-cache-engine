@@ -238,10 +238,6 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 			return err
 		}
 
-	case redis:
-		return h.provisionRedisCache()
-	}
-
 	// load the guest module distributed
 	err = h.provisionDistributed(ctx)
 	if err != nil {
@@ -249,19 +245,6 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 	}
 
 	config = h.Config
-	return nil
-}
-
-func (h *Handler) provisionRedisCache() error {
-	opts, err := backends.ParseRedisConfig(h.Config.RedisConnectionSetting)
-	if err != nil {
-		return err
-	}
-
-	if err := backends.InitRedisClient(opts.Addr, opts.Password, opts.DB); err != nil {
-		return err
-	}
-
 	return nil
 }
 
